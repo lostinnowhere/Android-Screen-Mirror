@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+for cmd in adb scrcpy; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Error: $cmd is not installed." >&2
+        if command -v apt &>/dev/null; then
+            echo "Install: sudo apt install $cmd" >&2
+        elif command -v pacman &>/dev/null; then
+            echo "Install: sudo pacman -S $cmd" >&2
+        elif command -v dnf &>/dev/null; then
+            echo "Install: sudo dnf install $cmd" >&2
+        elif command -v zypper &>/dev/null; then
+            echo "Install: sudo zypper install $cmd" >&2
+        elif command -v apk &>/dev/null; then
+            echo "Install: apk add $cmd" >&2
+        elif command -v xbps-install &>/dev/null; then
+            echo "Install: sudo xbps-install $cmd" >&2
+        elif command -v brew &>/dev/null; then
+            echo "Install: brew install $cmd" >&2
+        fi
+        exit 1
+    fi
+done
+
+wait_for_any_device() {
+    while true; do
+        read -t 1 -n 1 key || true
+        if [[ "${key:-}" =~ [qQ] ]]; then
+            echo ""
+            exit 0
+        fi
+        mapfile -t devices < <(adb devices | awk 'NR>1 && NF {print $1}')
+        if [[ ${#devices[@]} -gt 0 ]]; then
+            return
+        fi
+        echo "No device found, searching ..."
+    done
+}
+
+wait_for_device() {
+    local serial="$1"
+    while true; do
+        read -t 1 -n 1 key || true
+        if [[ "${key:-}" =~ [qQ] ]]; then
+            echo ""
+            exit 0
+        fi
+        if adb -s "$serial" get-state 2>/dev/null | grep -q -F "device"; then
+            return
+        fi
+        echo "Waiting for device $serial ..."
+    done
+}
+
+wait_for_any_device
+
+declare -a names pids
+tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t scrcpy-select)
+trap 'rm -rf "$tmpdir"' EXIT
+
+for i in "${!devices[@]}"; do
+    (adb -s "${devices[$i]}" shell getprop ro.product.model 2>/dev/null | tr -d '\r' > "$tmpdir/$i") &
+    pids[$i]=$!
+done
+
+for i in "${!devices[@]}"; do
+    wait "${pids[$i]}" 2>/dev/null
+    names[$i]=$(<"$tmpdir/$i")
+    [[ -z "${names[$i]}" ]] && names[$i]="Unknown"
+done
+
+echo "Connected devices:"
+row=""
+for i in "${!devices[@]}"; do
+    entry="$((i+1))) ${names[$i]}  (${devices[$i]})"
+    if [[ $(( (i+1) % 2 )) -eq 0 ]]; then
+        echo "  $row  $entry"
+        row=""
+    else
+        row="$entry"
+    fi
+done
+[[ -n "$row" ]] && echo "  $row"
+
+echo ""
+echo "Device screen scaling:"
+echo "  1) 0.25x     2) 0.5x     3) 0.75x"
+echo "  4) 1x (default)"
+echo "  5) 1.25x     6) 1.5x     7) 1.75x     8) 2x"
+
+echo ""
+echo "Keep device screen on?"
+echo "  1) yes     2) no"
+
+echo ""
+printf "Enter your choice (e.g. 132 = device 1, scale 0.75x, screen off): "
+read -r input
+
+input="${input:-141}"
+
+len=${#input}
+if [[ $len -eq 1 ]]; then
+    dev_choice="$input"
+    scale_choice="4"
+    screen_choice="1"
+elif [[ $len -eq 2 ]]; then
+    dev_choice="${input:0:1}"
+    scale_choice="4"
+    screen_choice="${input:1:1}"
+elif [[ $len -ge 3 ]]; then
+    dev_choice="${input:0:1}"
+    scale_choice="${input:1:1}"
+    screen_choice="${input:2:1}"
+else
+    echo "Invalid input." >&2
+    exit 1
+fi
+
+if [[ ! "$dev_choice" =~ ^[0-9]+$ ]] || (( dev_choice < 1 || dev_choice > ${#devices[@]} )); then
+    echo "Invalid device selection." >&2
+    exit 1
+fi
+device="${devices[$((dev_choice-1))]}"
+
+if [[ ! "$scale_choice" =~ ^[0-9]+$ ]] || (( scale_choice < 1 || scale_choice > 8 )); then
+    echo "Invalid scale selection, using 1x." >&2
+    scale_choice=4
+fi
+
+if [[ ! "$screen_choice" =~ ^[0-9]+$ ]] || (( screen_choice < 1 || screen_choice > 2 )); then
+    echo "Invalid screen-off selection, using keep on." >&2
+    screen_choice=1
+fi
+
+case "$scale_choice" in
+    1) factor=0.25 ;;
+    2) factor=0.5 ;;
+    3) factor=0.75 ;;
+    4) factor=1 ;;
+    5) factor=1.25 ;;
+    6) factor=1.5 ;;
+    7) factor=1.75 ;;
+    8) factor=2 ;;
+esac
+
+resolution_warned=false
+reconnecting=false
+while true; do
+    read -t 0.2 -n 1 key 2>/dev/null || true
+    if [[ "${key:-}" =~ [qQ] ]]; then
+        echo "" && exit 0
+    fi
+
+    wait_for_device "$device"
+    if [[ "$reconnecting" == true ]]; then
+        echo "Reconnecting..."
+    fi
+
+    resolution=$(adb -s "$device" shell wm size 2>/dev/null | grep -oE '[0-9]+x[0-9]+' || true)
+
+    unset max_size
+    if [[ -n "$resolution" ]]; then
+        width="${resolution%%x*}"
+        max_size=$(awk "BEGIN {printf \"%.0f\", $width * $factor}")
+        [[ "$reconnecting" == false ]] && echo "  Resolution: $resolution, max-size: $max_size"
+    elif [[ "$scale_choice" != 4 ]] && [[ "$resolution_warned" == false ]]; then
+        echo "Warning: could not detect resolution, ignoring scale factor." >&2
+        resolution_warned=true
+    fi
+
+    opts=""
+    if [[ -n "${max_size:-}" ]]; then
+        opts="--max-size $max_size"
+    fi
+    if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
+        opts="$opts --turn-screen-off"
+    fi
+
+    if scrcpy -s "$device" $opts; then
+        exit 0
+    fi
+
+    reconnecting=true
+
+    # Check if device is still reachable — if yes, scrcpy failed for a
+    # non-connection reason (codec, config, etc.) and we should give up.
+    if adb -s "$device" get-state 2>/dev/null | grep -q -F "device"; then
+        echo "scrcpy failed unexpectedly, exiting." >&2
+        exit 1
+    fi
+
+    echo "Connection lost. Retrying in 2 seconds... (press Q to quit)"
+    read -t 2 -n 1 key 2>/dev/null || true
+    [[ "${key:-}" =~ [qQ] ]] && echo "" && exit 0
+done
