@@ -172,8 +172,14 @@ while true; do
     unset max_size
     if [[ -n "$resolution" ]]; then
         width="${resolution%%x*}"
-        max_size=$(awk "BEGIN {printf \"%.0f\", $width * $factor}")
-        [[ "$reconnecting" == false ]] && echo "  Resolution: $resolution, max-size: $max_size"
+        height="${resolution#*x}"
+        if (( width > height )); then
+            longest="$width"
+        else
+            longest="$height"
+        fi
+        max_size=$(awk "BEGIN {printf \"%.0f\", $longest * $factor}")
+        [[ "$reconnecting" == false ]] && echo "  Resolution: ${width}x${height}, max-size: $max_size"
     elif [[ "$scale_choice" != 4 ]] && [[ "$resolution_warned" == false ]]; then
         echo "Warning: could not detect resolution, ignoring scale factor." >&2
         resolution_warned=true
