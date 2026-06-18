@@ -24,13 +24,23 @@ for cmd in adb scrcpy; do
 done
 
 wait_for_any_device() {
+    echo "No Android device detected."
+    echo "Make sure USB debugging is enabled on your device:"
+    echo "  Settings → About phone → tap Build number 7 times"
+    echo "  Settings → Developer options → USB debugging → ON"
+    echo "Connect the device via USB and accept the authorization prompt."
+    echo "Press Q to quit."
+    echo ""
     while true; do
         read -t 1 -n 1 key || true
         if [[ "${key:-}" =~ [qQ] ]]; then
             echo ""
             exit 0
         fi
-        mapfile -t devices < <(adb devices | awk 'NR>1 && NF {print $1}')
+        devices=()
+        while IFS= read -r line; do
+            devices+=("$line")
+        done < <(adb devices | awk 'NR>1 && NF {print $1}')
         if [[ ${#devices[@]} -gt 0 ]]; then
             return
         fi
@@ -157,7 +167,7 @@ while true; do
         echo "Reconnecting..."
     fi
 
-    resolution=$(adb -s "$device" shell wm size 2>/dev/null | grep -oE '[0-9]+x[0-9]+' || true)
+    resolution=$(adb -s "$device" shell wm size 2>/dev/null | sed -n 's/.*\([0-9]\{1,\}x[0-9]\{1,\}\).*/\1/p' || true)
 
     unset max_size
     if [[ -n "$resolution" ]]; then
