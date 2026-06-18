@@ -1,4 +1,4 @@
-# scrcpy-simple-helper
+# Android-Screen-Mirror
 
 Interactive device selector for scrcpy with auto-reconnect and scaling.
 
