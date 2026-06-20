@@ -7,17 +7,29 @@ for cmd in adb scrcpy; do
         if command -v apt &>/dev/null; then
             echo "Install: sudo apt install $cmd" >&2
         elif command -v pacman &>/dev/null; then
-            echo "Install: sudo pacman -S $cmd" >&2
+            case "$cmd" in
+                adb) echo "Install: sudo pacman -S android-tools" >&2 ;;
+                *)   echo "Install: sudo pacman -S $cmd" >&2 ;;
+            esac
         elif command -v dnf &>/dev/null; then
             echo "Install: sudo dnf install $cmd" >&2
         elif command -v zypper &>/dev/null; then
-            echo "Install: sudo zypper install $cmd" >&2
+            case "$cmd" in
+                adb) echo "Install: sudo zypper install android-tools" >&2 ;;
+                *)   echo "Install: sudo zypper install $cmd" >&2 ;;
+            esac
         elif command -v apk &>/dev/null; then
-            echo "Install: apk add $cmd" >&2
+            case "$cmd" in
+                adb) echo "Install: apk add android-tools" >&2 ;;
+                *)   echo "Install: apk add $cmd" >&2 ;;
+            esac
         elif command -v xbps-install &>/dev/null; then
             echo "Install: sudo xbps-install $cmd" >&2
         elif command -v brew &>/dev/null; then
-            echo "Install: brew install $cmd" >&2
+            case "$cmd" in
+                adb) echo "Install: brew install android-platform-tools" >&2 ;;
+                *)   echo "Install: brew install $cmd" >&2 ;;
+            esac
         fi
         exit 1
     fi
