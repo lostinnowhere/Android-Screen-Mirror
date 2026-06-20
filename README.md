@@ -5,7 +5,7 @@ Interactive Android device selector for scrcpy with auto-reconnect and scaling. 
 ## Quick install
 
 ```sh
-curl -sSL https://raw.githubusercontent.com/lostinnowhere/Android-Screen-Mirror/main/scrcpy-helper -o scrcpy-helper && chmod +x scrcpy-helper
+mkdir -p ~/Projects && curl -sSL https://raw.githubusercontent.com/lostinnowhere/Android-Screen-Mirror/main/scrcpy-helper -o ~/Projects/scrcpy-helper && chmod +x ~/Projects/scrcpy-helper && echo "Saved to ~/Projects/scrcpy-helper"
 ```
 
 ## Usage
