@@ -1,45 +1,60 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+pkg_install_cmd() {
+    local cmd="$1"
+    if command -v apt &>/dev/null; then
+        echo "sudo apt install $cmd"
+    elif command -v pacman &>/dev/null; then
+        case "$cmd" in
+            adb) echo "sudo pacman -S android-tools" ;;
+            *)   echo "sudo pacman -S $cmd" ;;
+        esac
+    elif command -v dnf &>/dev/null; then
+        case "$cmd" in
+            adb) echo "sudo dnf install android-tools" ;;
+            *)   echo "sudo dnf install $cmd" ;;
+        esac
+    elif command -v zypper &>/dev/null; then
+        case "$cmd" in
+            adb) echo "sudo zypper install android-tools" ;;
+            *)   echo "sudo zypper install $cmd" ;;
+        esac
+    elif command -v apk &>/dev/null; then
+        case "$cmd" in
+            adb) echo "apk add android-tools" ;;
+            *)   echo "apk add $cmd" ;;
+        esac
+    elif command -v xbps-install &>/dev/null; then
+        case "$cmd" in
+            adb) echo "sudo xbps-install android-tools" ;;
+            *)   echo "sudo xbps-install $cmd" ;;
+        esac
+    elif command -v brew &>/dev/null; then
+        case "$cmd" in
+            adb) echo "brew install android-platform-tools" ;;
+            *)   echo "brew install $cmd" ;;
+        esac
+    else
+        echo "Install $cmd manually"
+    fi
+}
+
+missing=()
 for cmd in adb scrcpy; do
     if ! command -v "$cmd" &>/dev/null; then
-        echo "Error: $cmd is not installed." >&2
-        if command -v apt &>/dev/null; then
-            echo "Install: sudo apt install $cmd" >&2
-        elif command -v pacman &>/dev/null; then
-            case "$cmd" in
-                adb) echo "Install: sudo pacman -S android-tools" >&2 ;;
-                *)   echo "Install: sudo pacman -S $cmd" >&2 ;;
-            esac
-        elif command -v dnf &>/dev/null; then
-            case "$cmd" in
-                adb) echo "Install: sudo dnf install android-tools" >&2 ;;
-                *)   echo "Install: sudo dnf install $cmd" >&2 ;;
-            esac
-        elif command -v zypper &>/dev/null; then
-            case "$cmd" in
-                adb) echo "Install: sudo zypper install android-tools" >&2 ;;
-                *)   echo "Install: sudo zypper install $cmd" >&2 ;;
-            esac
-        elif command -v apk &>/dev/null; then
-            case "$cmd" in
-                adb) echo "Install: apk add android-tools" >&2 ;;
-                *)   echo "Install: apk add $cmd" >&2 ;;
-            esac
-        elif command -v xbps-install &>/dev/null; then
-            case "$cmd" in
-                adb) echo "Install: sudo xbps-install android-tools" >&2 ;;
-                *)   echo "Install: sudo xbps-install $cmd" >&2 ;;
-            esac
-        elif command -v brew &>/dev/null; then
-            case "$cmd" in
-                adb) echo "Install: brew install android-platform-tools" >&2 ;;
-                *)   echo "Install: brew install $cmd" >&2 ;;
-            esac
-        fi
-        exit 1
+        missing+=("$cmd")
     fi
 done
+
+if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "Missing dependencies:" >&2
+    for cmd in "${missing[@]}"; do
+        install_cmd=$(pkg_install_cmd "$cmd")
+        echo "  $cmd → $install_cmd" >&2
+    done
+    exit 1
+fi
 
 wait_for_any_device() {
     echo "No Android device detected."
