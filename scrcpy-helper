@@ -1,42 +1,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-pkg_install_cmd() {
-    local cmd="$1"
+install_all_cmd() {
     if command -v apt &>/dev/null; then
-        echo "sudo apt install $cmd"
+        prefix="sudo apt install"
+        adb_pkg="adb"
     elif command -v pacman &>/dev/null; then
-        case "$cmd" in
-            adb) echo "sudo pacman -S android-tools" ;;
-            *)   echo "sudo pacman -S $cmd" ;;
-        esac
+        prefix="sudo pacman -S"
+        adb_pkg="android-tools"
     elif command -v dnf &>/dev/null; then
-        case "$cmd" in
-            adb) echo "sudo dnf install android-tools" ;;
-            *)   echo "sudo dnf install $cmd" ;;
-        esac
+        prefix="sudo dnf install"
+        adb_pkg="android-tools"
     elif command -v zypper &>/dev/null; then
-        case "$cmd" in
-            adb) echo "sudo zypper install android-tools" ;;
-            *)   echo "sudo zypper install $cmd" ;;
-        esac
+        prefix="sudo zypper install"
+        adb_pkg="android-tools"
     elif command -v apk &>/dev/null; then
-        case "$cmd" in
-            adb) echo "apk add android-tools" ;;
-            *)   echo "apk add $cmd" ;;
-        esac
+        prefix="apk add"
+        adb_pkg="android-tools"
     elif command -v xbps-install &>/dev/null; then
-        case "$cmd" in
-            adb) echo "sudo xbps-install android-tools" ;;
-            *)   echo "sudo xbps-install $cmd" ;;
-        esac
+        prefix="sudo xbps-install"
+        adb_pkg="android-tools"
     elif command -v brew &>/dev/null; then
-        case "$cmd" in
-            adb) echo "brew install android-platform-tools" ;;
-            *)   echo "brew install $cmd" ;;
-        esac
+        prefix="brew install"
+        adb_pkg="android-platform-tools"
     else
-        echo "Install $cmd manually"
+        prefix=""
+    fi
+
+    local pkgs=()
+    for cmd in "$@"; do
+        case "$cmd" in
+            adb) pkgs+=("$adb_pkg") ;;
+            *)   pkgs+=("$cmd") ;;
+        esac
+    done
+
+    if [[ -n "$prefix" ]]; then
+        echo "$prefix ${pkgs[*]}"
+    else
+        echo "Please install: ${pkgs[*]}"
     fi
 }
 
@@ -48,11 +50,12 @@ for cmd in adb scrcpy; do
 done
 
 if [[ ${#missing[@]} -gt 0 ]]; then
-    echo "Missing dependencies:" >&2
-    for cmd in "${missing[@]}"; do
-        install_cmd=$(pkg_install_cmd "$cmd")
-        echo "  $cmd → $install_cmd" >&2
+    printf "Missing dependencies: " >&2
+    for i in "${!missing[@]}"; do
+        if (( i > 0 )); then printf ", " >&2; fi
+        printf "%s" "${missing[$i]}" >&2
     done
+    printf "\n  Install: %s\n" "$(install_all_cmd "${missing[@]}")" >&2
     exit 1
 fi
 
