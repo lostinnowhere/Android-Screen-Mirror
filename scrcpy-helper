@@ -60,7 +60,11 @@ if [[ ${#missing[@]} -gt 0 ]]; then
     printf "Install now? (y/N): " >&2
     read -r answer
     if [[ "$answer" =~ ^[yY] ]]; then
-        if eval "$install_cmd"; then
+        if [[ "$install_cmd" != sudo* && "$install_cmd" != apk* && "$install_cmd" != brew* ]]; then
+            printf "Unsupported package manager. Please install manually.\n" >&2
+            exit 1
+        fi
+        if bash -c "$install_cmd"; then
             # Re-check after install
             for cmd in "${missing[@]}"; do
                 if ! command -v "$cmd" &>/dev/null; then
@@ -70,6 +74,13 @@ if [[ ${#missing[@]} -gt 0 ]]; then
             done
         else
             printf "Installation failed.\n" >&2
+            if command -v dnf &>/dev/null; then
+                printf "  Fedora: scrcpy requires RPM Fusion.\n" >&2
+                printf "  sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm\n" >&2
+            elif command -v zypper &>/dev/null; then
+                printf "  openSUSE: scrcpy requires Packman.\n" >&2
+                printf "  sudo zypper addrepo https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman\n" >&2
+            fi
             exit 1
         fi
     else
