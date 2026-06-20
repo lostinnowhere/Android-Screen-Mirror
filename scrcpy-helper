@@ -79,7 +79,15 @@ if [[ ${#missing[@]} -gt 0 ]]; then
                 printf "  sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm\n" >&2
             elif command -v zypper &>/dev/null; then
                 printf "  openSUSE: scrcpy requires Packman.\n" >&2
-                printf "  sudo zypper addrepo https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman\n" >&2
+                if grep -qi "tumbleweed" /etc/os-release 2>/dev/null; then
+                    os_version="openSUSE_Tumbleweed"
+                elif grep -q "^VERSION_ID=" /etc/os-release 2>/dev/null; then
+                    version=$(grep "^VERSION_ID=" /etc/os-release | cut -d= -f2 | tr -d '"')
+                    os_version="openSUSE_Leap_$version"
+                else
+                    os_version="openSUSE_Tumbleweed"
+                fi
+                printf "  sudo zypper addrepo https://ftp.gwdg.de/pub/linux/misc/packman/suse/%s/ packman\n" "$os_version" >&2
             fi
             exit 1
         fi
@@ -96,6 +104,7 @@ wait_for_any_device() {
     echo "Connect the device via USB and accept the authorization prompt."
     echo "Press Q to quit."
     echo ""
+    local key
     while true; do
         read -t 1 -n 1 key || true
         if [[ "${key:-}" =~ [qQ] ]]; then
@@ -115,6 +124,7 @@ wait_for_any_device() {
 
 wait_for_device() {
     local serial="$1"
+    local key
     while true; do
         read -t 1 -n 1 key || true
         if [[ "${key:-}" =~ [qQ] ]]; then
