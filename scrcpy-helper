@@ -55,8 +55,26 @@ if [[ ${#missing[@]} -gt 0 ]]; then
         if (( i > 0 )); then printf ", " >&2; fi
         printf "%s" "${missing[$i]}" >&2
     done
-    printf "\n  Install: %s\n" "$(install_all_cmd "${missing[@]}")" >&2
-    exit 1
+    install_cmd=$(install_all_cmd "${missing[@]}")
+    printf "\n  Install: %s\n" "$install_cmd" >&2
+    printf "Install now? (y/N): " >&2
+    read -r answer
+    if [[ "$answer" =~ ^[yY] ]]; then
+        if eval "$install_cmd"; then
+            # Re-check after install
+            for cmd in "${missing[@]}"; do
+                if ! command -v "$cmd" &>/dev/null; then
+                    printf "Failed to install %s. Please install it manually.\n" "$cmd" >&2
+                    exit 1
+                fi
+            done
+        else
+            printf "Installation failed.\n" >&2
+            exit 1
+        fi
+    else
+        exit 1
+    fi
 fi
 
 wait_for_any_device() {
