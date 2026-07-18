@@ -140,33 +140,11 @@ wait_for_device() {
 
 wait_for_any_device
 
-declare -a names pids
-tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t scrcpy-select)
-trap 'rm -rf "$tmpdir"' EXIT
-
-for i in "${!devices[@]}"; do
-    (adb -s "${devices[$i]}" shell getprop ro.product.model 2>/dev/null | tr -d '\r' > "$tmpdir/$i") &
-    pids[$i]=$!
-done
-
-for i in "${!devices[@]}"; do
-    wait "${pids[$i]}" 2>/dev/null
-    names[$i]=$(<"$tmpdir/$i")
-    [[ -z "${names[$i]}" ]] && names[$i]="Unknown"
-done
-
 echo "Connected devices:"
-row=""
 for i in "${!devices[@]}"; do
-    entry="$((i+1))) ${names[$i]}  (${devices[$i]})"
-    if [[ $(( (i+1) % 2 )) -eq 0 ]]; then
-        echo "  $row  $entry"
-        row=""
-    else
-        row="$entry"
-    fi
+    name=$(adb -s "${devices[$i]}" shell getprop ro.product.model 2>/dev/null | tr -d '\r')
+    echo "  $((i+1))) ${name:-Unknown}  (${devices[$i]})"
 done
-[[ -n "$row" ]] && echo "  $row"
 
 echo ""
 echo "Keep device screen on?"
@@ -185,19 +163,10 @@ read -r input
 
 input="${input:-11}"
 
-len=${#input}
-if [[ $len -ge 2 ]]; then
-    dev_choice="${input:0:1}"
-    screen_choice="${input:1:1}"
-    rest="${input:2}"
-elif [[ $len -eq 1 ]]; then
-    dev_choice="$input"
-    screen_choice="1"
-    rest=""
-else
-    echo "Invalid input." >&2
-    exit 1
-fi
+dev_choice="${input:0:1}"
+screen_choice="${input:1:1}"
+screen_choice="${screen_choice:-1}"
+rest="${input:2}"
 
 if [[ ! "$dev_choice" =~ ^[0-9]+$ ]] || (( dev_choice < 1 || dev_choice > ${#devices[@]} )); then
     echo "Invalid device selection." >&2
@@ -233,7 +202,6 @@ else
     scale_choice=4
 fi
 
-resolution_warned=false
 reconnecting=false
 while true; do
     read -t 0.2 -n 1 key 2>/dev/null || true
@@ -266,9 +234,8 @@ while true; do
     elif [[ -n "${custom_max_size:-}" ]]; then
         max_size="$custom_max_size"
         [[ "$reconnecting" == false ]] && echo "  Using max-size: $max_size (resolution not detected)"
-    elif [[ "${scale_choice:-4}" != 4 ]] && [[ "$resolution_warned" == false ]]; then
+    elif [[ "${scale_choice:-4}" != 4 ]]; then
         echo "Warning: could not detect resolution, ignoring scale factor." >&2
-        resolution_warned=true
     fi
 
     opts=""
