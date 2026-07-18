@@ -177,7 +177,7 @@ echo "  1) 0.25x     2) 0.5x      3) 0.75x     4) 1x (default)"
 echo "  5) 1.25x     6) 1.5x      7) 1.75x     8) 2x"
 echo ""
 echo "  For a specific output resolution, enter the pixel value directly"
-echo "  (e.g. 1280 for 720p, 1920 for 1080p), or WxH (e.g. 1280x720)"
+echo "  (e.g. 1280 for 720p, 1920 for 1080p)"
 
 echo ""
 printf "Enter choice (e.g. 121280 = device 1, screen off, 1280px): "
@@ -227,9 +227,6 @@ elif [[ "$rest" =~ ^[1-8]$ ]]; then
     esac
 elif [[ "$rest" =~ ^[0-9]+$ ]] && (( rest > 0 )); then
     custom_max_size="$rest"
-elif [[ "$rest" =~ ^[0-9]+x[0-9]+$ ]]; then
-    custom_width="${rest%%x*}"
-    custom_height="${rest#*x}"
 else
     echo "Invalid scale/resolution, using 1x." >&2
     factor=1
@@ -251,21 +248,8 @@ while true; do
 
     resolution=$(adb -s "$device" shell wm size 2>/dev/null | sed -n 's/.*\([0-9]\{1,\}x[0-9]\{1,\}\).*/\1/p;q' || true)
 
-    if [[ -n "${custom_width:-}" && -n "${custom_height:-}" && -n "$resolution" ]]; then
-        dev_w="${resolution%%x*}"
-        dev_h="${resolution#*x}"
-        # Match user orientation to device orientation
-        if (( custom_width > custom_height && dev_w < dev_h )); then
-            tmp=$custom_width; custom_width=$custom_height; custom_height=$tmp
-        elif (( custom_width < custom_height && dev_w > dev_h )); then
-            tmp=$custom_width; custom_width=$custom_height; custom_height=$tmp
-        fi
-    fi
-
     unset max_size
-    if [[ -n "${custom_width:-}" && -n "${custom_height:-}" ]]; then
-        : # opts built from custom WxH below
-    elif [[ -n "$resolution" ]]; then
+    if [[ -n "$resolution" ]]; then
         width="${resolution%%x*}"
         height="${resolution#*x}"
         if (( width > height )); then
@@ -288,15 +272,7 @@ while true; do
     fi
 
     opts=""
-    if [[ -n "${custom_width:-}" && -n "${custom_height:-}" ]]; then
-        if (( custom_width > custom_height )); then
-            wmax=$custom_width
-        else
-            wmax=$custom_height
-        fi
-        opts="--max-size $wmax"
-        [[ "$reconnecting" == false ]] && echo "  Output: ${custom_width}x${custom_height} (max-size: $wmax)"
-    elif [[ -n "${max_size:-}" ]]; then
+    if [[ -n "${max_size:-}" ]]; then
         opts="--max-size $max_size"
     fi
     if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
