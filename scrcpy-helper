@@ -180,7 +180,7 @@ echo "Keep device screen on?"
 echo "  1) yes     2) no"
 
 echo ""
-printf "Enter device and screen (e.g. 12 = device 1, screen off): "
+printf "Enter choice (e.g. 121280 = device 1, screen off, 1280px): "
 read -r input
 
 input="${input:-11}"
@@ -189,9 +189,11 @@ len=${#input}
 if [[ $len -ge 2 ]]; then
     dev_choice="${input:0:1}"
     screen_choice="${input:1:1}"
+    rest="${input:2}"
 elif [[ $len -eq 1 ]]; then
     dev_choice="$input"
     screen_choice="1"
+    rest=""
 else
     echo "Invalid input." >&2
     exit 1
@@ -208,11 +210,11 @@ if [[ ! "$screen_choice" =~ ^[0-9]+$ ]] || (( screen_choice < 1 || screen_choice
     screen_choice=1
 fi
 
-printf "Enter scale (1-8) or max-size in pixels (e.g. 1280): "
-read -r scale_input
-
-if [[ "$scale_input" =~ ^[1-8]$ ]]; then
-    scale_choice="$scale_input"
+if [[ -z "$rest" ]]; then
+    factor=1
+    scale_choice=4
+elif [[ "$rest" =~ ^[1-8]$ ]]; then
+    scale_choice="$rest"
     case "$scale_choice" in
         1) factor=0.25 ;;
         2) factor=0.5 ;;
@@ -223,10 +225,10 @@ if [[ "$scale_input" =~ ^[1-8]$ ]]; then
         7) factor=1.75 ;;
         8) factor=2 ;;
     esac
-elif [[ "$scale_input" =~ ^[0-9]+$ ]] && (( scale_input > 0 )); then
-    custom_max_size="$scale_input"
+elif [[ "$rest" =~ ^[0-9]+$ ]] && (( rest > 0 )); then
+    custom_max_size="$rest"
 else
-    echo "Invalid input, using 1x." >&2
+    echo "Invalid scale/resolution, using 1x." >&2
     factor=1
     scale_choice=4
 fi
