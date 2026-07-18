@@ -278,8 +278,13 @@ while true; do
 
     opts=""
     if [[ -n "${custom_width:-}" && -n "${custom_height:-}" ]]; then
-        opts="--width $custom_width --height $custom_height"
-        [[ "$reconnecting" == false ]] && echo "  Output: ${custom_width}x${custom_height}"
+        if (( custom_width > custom_height )); then
+            wmax=$custom_width
+        else
+            wmax=$custom_height
+        fi
+        opts="--max-size $wmax"
+        [[ "$reconnecting" == false ]] && echo "  Output: ${custom_width}x${custom_height} (max-size: $wmax)"
     elif [[ -n "${max_size:-}" ]]; then
         opts="--max-size $max_size"
     fi
