@@ -251,9 +251,20 @@ while true; do
 
     resolution=$(adb -s "$device" shell wm size 2>/dev/null | sed -n 's/.*\([0-9]\{1,\}x[0-9]\{1,\}\).*/\1/p' || true)
 
+    if [[ -n "${custom_width:-}" && -n "${custom_height:-}" && -n "$resolution" ]]; then
+        dev_w="${resolution%%x*}"
+        dev_h="${resolution#*x}"
+        # Match user orientation to device orientation
+        if (( custom_width > custom_height && dev_w < dev_h )); then
+            tmp=$custom_width; custom_width=$custom_height; custom_height=$tmp
+        elif (( custom_width < custom_height && dev_w > dev_h )); then
+            tmp=$custom_width; custom_width=$custom_height; custom_height=$tmp
+        fi
+    fi
+
     unset max_size
     if [[ -n "${custom_width:-}" && -n "${custom_height:-}" ]]; then
-        : # opts built from --width/--height directly
+        : # opts built from custom WxH below
     elif [[ -n "$resolution" ]]; then
         width="${resolution%%x*}"
         height="${resolution#*x}"
