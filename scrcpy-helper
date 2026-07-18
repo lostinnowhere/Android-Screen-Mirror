@@ -249,7 +249,7 @@ while true; do
         echo "Reconnecting..."
     fi
 
-    resolution=$(adb -s "$device" shell wm size 2>/dev/null | sed -n 's/.*\([0-9]\{1,\}x[0-9]\{1,\}\).*/\1/p' || true)
+    resolution=$(adb -s "$device" shell wm size 2>/dev/null | sed -n 's/.*\([0-9]\{1,\}x[0-9]\{1,\}\).*/\1/p;q' || true)
 
     if [[ -n "${custom_width:-}" && -n "${custom_height:-}" && -n "$resolution" ]]; then
         dev_w="${resolution%%x*}"
