@@ -26,11 +26,13 @@ The script shows all connected devices, a scale menu, and a screen-off toggle. Y
 | `122` | Device 1, screen off, scale 2 (0.5x) |
 | `121280` | Device 1, screen off, max-size 1280 (720p on a 1080p tablet) |
 | `111920` | Device 1, screen on, max-size 1920 (1080p) |
+| `111280x720` | Device 1, screen on, exact output 1280x720 |
+| `121920x1080` | Device 1, screen off, exact output 1920x1080 |
 | `21600` | Device 2, screen on, max-size 600 |
 | `221` | Device 2, screen off, scale 1 (0.25x) |
 | `1` | Device 1, screen on, no scaling |
 
-**Format:** first char = device number, second char = screen on(1) / off(2), rest = scale (1-8) or pixel max-size.
+**Format:** first char = device number, second char = screen on(1) / off(2), rest = scale (1-8), pixel max-size, or `WxH` for exact output resolution.
 
 ### Scale presets
 
