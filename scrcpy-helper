@@ -169,15 +169,15 @@ done
 [[ -n "$row" ]] && echo "  $row"
 
 echo ""
+echo "Keep device screen on?"
+echo "  1) yes     2) no"
+echo ""
 echo "Device screen scaling:"
 echo "  1) 0.25x     2) 0.5x      3) 0.75x     4) 1x (default)"
 echo "  5) 1.25x     6) 1.5x      7) 1.75x     8) 2x"
 echo ""
 echo "  For a specific output resolution, enter the pixel value directly"
 echo "  (e.g. 1280 for 720p, 1920 for 1080p)"
-echo ""
-echo "Keep device screen on?"
-echo "  1) yes     2) no"
 
 echo ""
 printf "Enter choice (e.g. 121280 = device 1, screen off, 1280px): "
