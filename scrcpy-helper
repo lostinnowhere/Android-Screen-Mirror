@@ -172,31 +172,26 @@ echo ""
 echo "Device screen scaling:"
 echo "  1) 0.25x     2) 0.5x      3) 0.75x     4) 1x (default)"
 echo "  5) 1.25x     6) 1.5x      7) 1.75x     8) 2x"
-echo "  9) Custom max-size (enter pixel value, e.g. 1280)"
-
+echo ""
+echo "  For a specific output resolution, enter the pixel value directly"
+echo "  (e.g. 1280 for 720p, 1920 for 1080p)"
 echo ""
 echo "Keep device screen on?"
 echo "  1) yes     2) no"
 
 echo ""
-printf "Enter your choice (e.g. 132 = device 1, scale 0.75x, screen off): "
+printf "Enter device and screen (e.g. 12 = device 1, screen off): "
 read -r input
 
-input="${input:-141}"
+input="${input:-11}"
 
 len=${#input}
-if [[ $len -eq 1 ]]; then
-    dev_choice="$input"
-    scale_choice="4"
-    screen_choice="1"
-elif [[ $len -eq 2 ]]; then
+if [[ $len -ge 2 ]]; then
     dev_choice="${input:0:1}"
-    scale_choice="4"
     screen_choice="${input:1:1}"
-elif [[ $len -ge 3 ]]; then
-    dev_choice="${input:0:1}"
-    scale_choice="${input:1:1}"
-    screen_choice="${input:2:1}"
+elif [[ $len -eq 1 ]]; then
+    dev_choice="$input"
+    screen_choice="1"
 else
     echo "Invalid input." >&2
     exit 1
@@ -208,35 +203,33 @@ if [[ ! "$dev_choice" =~ ^[0-9]+$ ]] || (( dev_choice < 1 || dev_choice > ${#dev
 fi
 device="${devices[$((dev_choice-1))]}"
 
-if [[ ! "$scale_choice" =~ ^[0-9]+$ ]] || (( scale_choice < 1 || scale_choice > 9 )); then
-    echo "Invalid scale selection, using 1x." >&2
-    scale_choice=4
-fi
-
 if [[ ! "$screen_choice" =~ ^[0-9]+$ ]] || (( screen_choice < 1 || screen_choice > 2 )); then
     echo "Invalid screen-off selection, using keep on." >&2
     screen_choice=1
 fi
 
-case "$scale_choice" in
-    1) factor=0.25 ;;
-    2) factor=0.5 ;;
-    3) factor=0.75 ;;
-    4) factor=1 ;;
-    5) factor=1.25 ;;
-    6) factor=1.5 ;;
-    7) factor=1.75 ;;
-    8) factor=2 ;;
-    9) printf "Enter max-size in pixels (e.g. 1280): " >&2
-       read -r custom_pixel
-       if [[ ! "$custom_pixel" =~ ^[0-9]+$ ]] || [[ -z "$custom_pixel" ]]; then
-           echo "Invalid value, using 1x." >&2
-           factor=1
-       else
-           custom_max_size="$custom_pixel"
-       fi
-       ;;
-esac
+printf "Enter scale (1-8) or max-size in pixels (e.g. 1280): "
+read -r scale_input
+
+if [[ "$scale_input" =~ ^[1-8]$ ]]; then
+    scale_choice="$scale_input"
+    case "$scale_choice" in
+        1) factor=0.25 ;;
+        2) factor=0.5 ;;
+        3) factor=0.75 ;;
+        4) factor=1 ;;
+        5) factor=1.25 ;;
+        6) factor=1.5 ;;
+        7) factor=1.75 ;;
+        8) factor=2 ;;
+    esac
+elif [[ "$scale_input" =~ ^[0-9]+$ ]] && (( scale_input > 0 )); then
+    custom_max_size="$scale_input"
+else
+    echo "Invalid input, using 1x." >&2
+    factor=1
+    scale_choice=4
+fi
 
 resolution_warned=false
 reconnecting=false
