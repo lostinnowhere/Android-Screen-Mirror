@@ -170,9 +170,9 @@ done
 
 echo ""
 echo "Device screen scaling:"
-echo "  1) 0.25x     2) 0.5x     3) 0.75x"
-echo "  4) 1x (default)"
-echo "  5) 1.25x     6) 1.5x     7) 1.75x     8) 2x"
+echo "  1) 0.25x     2) 0.5x      3) 0.75x     4) 1x (default)"
+echo "  5) 1.25x     6) 1.5x      7) 1.75x     8) 2x"
+echo "  9) Custom max-size (enter pixel value, e.g. 1280)"
 
 echo ""
 echo "Keep device screen on?"
@@ -208,7 +208,7 @@ if [[ ! "$dev_choice" =~ ^[0-9]+$ ]] || (( dev_choice < 1 || dev_choice > ${#dev
 fi
 device="${devices[$((dev_choice-1))]}"
 
-if [[ ! "$scale_choice" =~ ^[0-9]+$ ]] || (( scale_choice < 1 || scale_choice > 8 )); then
+if [[ ! "$scale_choice" =~ ^[0-9]+$ ]] || (( scale_choice < 1 || scale_choice > 9 )); then
     echo "Invalid scale selection, using 1x." >&2
     scale_choice=4
 fi
@@ -227,6 +227,15 @@ case "$scale_choice" in
     6) factor=1.5 ;;
     7) factor=1.75 ;;
     8) factor=2 ;;
+    9) printf "Enter max-size in pixels (e.g. 1280): " >&2
+       read -r custom_pixel
+       if [[ ! "$custom_pixel" =~ ^[0-9]+$ ]] || [[ -z "$custom_pixel" ]]; then
+           echo "Invalid value, using 1x." >&2
+           factor=1
+       else
+           custom_max_size="$custom_pixel"
+       fi
+       ;;
 esac
 
 resolution_warned=false
@@ -253,8 +262,15 @@ while true; do
         else
             longest="$height"
         fi
-        max_size=$(awk "BEGIN {printf \"%.0f\", $longest * $factor}")
+        if [[ -n "${custom_max_size:-}" ]]; then
+            max_size="$custom_max_size"
+        else
+            max_size=$(awk "BEGIN {printf \"%.0f\", $longest * $factor}")
+        fi
         [[ "$reconnecting" == false ]] && echo "  Resolution: ${width}x${height}, max-size: $max_size"
+    elif [[ -n "${custom_max_size:-}" ]]; then
+        max_size="$custom_max_size"
+        [[ "$reconnecting" == false ]] && echo "  Using max-size: $max_size (resolution not detected)"
     elif [[ "$scale_choice" != 4 ]] && [[ "$resolution_warned" == false ]]; then
         echo "Warning: could not detect resolution, ignoring scale factor." >&2
         resolution_warned=true
