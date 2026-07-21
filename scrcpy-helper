@@ -246,6 +246,7 @@ while true; do
     scrcpy -s "$device" $opts &
     scrcpy_pid=$!
 
+    last_line_key=""
     while kill -0 $scrcpy_pid 2>/dev/null; do
         data=$(adb -s "$device" shell dumpsys battery 2>/dev/null || true)
         level=$(echo "$data" | awk -F': ' '/level:/ {print $2}')
