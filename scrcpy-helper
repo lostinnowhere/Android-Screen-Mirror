@@ -246,16 +246,14 @@ while true; do
     scrcpy -s "$device" $opts &
     scrcpy_pid=$!
 
-    start=$(date +%s)
     while kill -0 $scrcpy_pid 2>/dev/null; do
-        elapsed=$(( $(date +%s) - start ))
         data=$(adb -s "$device" shell dumpsys battery 2>/dev/null || true)
         level=$(echo "$data" | awk -F': ' '/level:/ {print $2}')
         temp=$(echo "$data" | awk -F': ' '/temperature:/ {print $2}')
         temp_disp="?"
         [[ -n "$temp" ]] && temp_disp=$(awk "BEGIN {printf \"%.1fC\", $temp / 10}")
-        printf "\r  [%02d:%02d]  Battery: %s%%  Temp: %s  " \
-            "$((elapsed/60))" "$((elapsed%60))" "${level:-?}" "$temp_disp"
+        printf "\r  [%s]  Battery: %s%%  Temp: %s  " \
+            "$(date +%H:%M:%S)" "${level:-?}" "$temp_disp"
         read -t 5 -n 1 key 2>/dev/null || true
         if [[ "${key:-}" =~ [qQ] ]]; then
             kill $scrcpy_pid 2>/dev/null; wait $scrcpy_pid 2>/dev/null
