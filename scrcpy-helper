@@ -252,7 +252,7 @@ while true; do
         temp=$(echo "$data" | awk -F': ' '/temperature:/ {print $2}')
         temp_disp="?"
         [[ -n "$temp" ]] && temp_disp=$(awk "BEGIN {printf \"%.1fC\", $temp / 10}")
-        printf "\r  [%s]  Battery: %s%%  Temp: %s  " \
+        printf "  [%s]  Battery: %s%%  Temp: %s\n" \
             "$(date +%H:%M:%S)" "${level:-?}" "$temp_disp"
         read -t 5 -n 1 key 2>/dev/null || true
         if [[ "${key:-}" =~ [qQ] ]]; then
