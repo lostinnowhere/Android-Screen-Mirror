@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+script_version=1
 
 install_all_cmd() {
     if command -v apt &>/dev/null; then
@@ -93,6 +94,25 @@ if [[ ${#missing[@]} -gt 0 ]]; then
         fi
     else
         exit 1
+    fi
+fi
+
+remote_version=$(curl -sSL https://raw.githubusercontent.com/lostinnowhere/Android-Screen-Mirror/master/version 2>/dev/null || echo "0")
+if [[ "$remote_version" =~ ^[0-9]+$ ]] && (( remote_version > script_version )); then
+    printf "Update available (v%s → v%s). Update now? (y/N): " "$script_version" "$remote_version" >&2
+    read -r answer
+    if [[ "$answer" =~ ^[yY] ]]; then
+        tmp=$(mktemp)
+        if curl -sSL https://raw.githubusercontent.com/lostinnowhere/Android-Screen-Mirror/master/scrcpy-helper -o "$tmp" && head -1 "$tmp" | grep -q '^#!/usr/bin/env bash'; then
+            chmod +x "$tmp"
+            mv "$tmp" "$0"
+            printf "Updated. Restarting...\n" >&2
+            exec "$0" "$@"
+        else
+            printf "Update failed.\n" >&2
+            rm -f "$tmp"
+            exit 1
+        fi
     fi
 fi
 
