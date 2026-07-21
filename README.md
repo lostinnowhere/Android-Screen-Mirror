@@ -47,6 +47,17 @@ The script shows all connected devices, a scale menu, and a screen-off toggle. Y
 
 For a specific output resolution, enter the pixel value directly (e.g. `1280` for 720p).
 
+### Live monitoring
+
+While scrcpy is running, the terminal logs battery level and temperature whenever they change:
+
+```
+  [14:35:22]  Battery: 85%  Temp: 28.0C
+  [14:42:10]  Battery: 84%  Temp: 28.5C
+```
+
+Press **Q** in the terminal to kill scrcpy and quit.
+
 ### Auto-reconnect
 
 - If the device disconnects (USB unplugged, WiFi drops), the script waits for it to come back and reconnects automatically
