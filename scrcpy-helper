@@ -217,6 +217,11 @@ while true; do
     if [[ -n "$resolution" ]]; then
         width="${resolution%%x*}"
         height="${resolution#*x}"
+        if (( width == 0 || height == 0 )); then
+            resolution=""
+        fi
+    fi
+    if [[ -n "$resolution" ]]; then
         if (( width > height )); then
             longest="$width"
         else
