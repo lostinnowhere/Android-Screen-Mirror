@@ -210,9 +210,6 @@ while true; do
     fi
 
     wait_for_device "$device"
-    if [[ "$reconnecting" == true ]]; then
-        echo "Reconnecting..."
-    fi
 
     resolution=$(adb -s "$device" shell wm size 2>/dev/null | sed -n 's/.*\([0-9]\{1,\}x[0-9]\{1,\}\).*/\1/p;q' || true)
 
@@ -246,7 +243,30 @@ while true; do
         opts="$opts --turn-screen-off"
     fi
 
-    if scrcpy -s "$device" $opts; then
+    scrcpy -s "$device" $opts &
+    scrcpy_pid=$!
+
+    start=$(date +%s)
+    while kill -0 $scrcpy_pid 2>/dev/null; do
+        elapsed=$(( $(date +%s) - start ))
+        data=$(adb -s "$device" shell dumpsys battery 2>/dev/null || true)
+        level=$(echo "$data" | awk -F': ' '/level:/ {print $2}')
+        temp=$(echo "$data" | awk -F': ' '/temperature:/ {print $2}')
+        temp_disp="?"
+        [[ -n "$temp" ]] && temp_disp=$(awk "BEGIN {printf \"%.1fC\", $temp / 10}")
+        printf "\r  [%02d:%02d]  Battery: %s%%  Temp: %s  " \
+            "$((elapsed/60))" "$((elapsed%60))" "${level:-?}" "$temp_disp"
+        read -t 5 -n 1 key 2>/dev/null || true
+        if [[ "${key:-}" =~ [qQ] ]]; then
+            kill $scrcpy_pid 2>/dev/null; wait $scrcpy_pid 2>/dev/null
+            echo "" && exit 0
+        fi
+    done
+    wait $scrcpy_pid
+    scrcpy_exit=$?
+    echo ""
+
+    if [[ $scrcpy_exit -eq 0 ]]; then
         exit 0
     fi
 
