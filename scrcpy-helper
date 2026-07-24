@@ -264,7 +264,6 @@ while true; do
     if [[ -n "${max_size:-}" ]]; then
         opts="--max-size $max_size"
     fi
-    opts="$opts --no-touch"
     if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
         opts="$opts --turn-screen-off"
     fi
