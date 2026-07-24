@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-script_version=1
+script_version=2
 
 install_all_cmd() {
     if command -v apt &>/dev/null; then
@@ -264,6 +264,7 @@ while true; do
     if [[ -n "${max_size:-}" ]]; then
         opts="--max-size $max_size"
     fi
+    opts="$opts --no-touch"
     if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
         opts="$opts --turn-screen-off"
     fi
