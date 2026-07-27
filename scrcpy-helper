@@ -260,12 +260,12 @@ while true; do
         echo "Warning: could not detect resolution, ignoring scale factor." >&2
     fi
 
-    opts=""
+    opts="--no-audio-playback"
     if [[ -n "${max_size:-}" ]]; then
-        opts="--max-size $max_size"
+        opts="$opts --max-size $max_size"
     fi
     if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
-        opts="$opts --turn-screen-off --no-audio-playback"
+        opts="$opts --turn-screen-off"
     fi
 
     scrcpy -s "$device" $opts &
