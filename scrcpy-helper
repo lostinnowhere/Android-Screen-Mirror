@@ -265,8 +265,7 @@ while true; do
         opts="--max-size $max_size"
     fi
     if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
-        opts="$opts --turn-screen-off"
-        adb -s "$device" shell cmd audio set-stream-mute STREAM_MUSIC true 2>/dev/null || true
+        opts="$opts --turn-screen-off --no-audio-playback"
     fi
 
     scrcpy -s "$device" $opts &
