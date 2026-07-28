@@ -260,13 +260,15 @@ while true; do
         echo "Warning: could not detect resolution, ignoring scale factor." >&2
     fi
 
-    opts="--no-audio-playback"
+    opts=""
     if [[ -n "${max_size:-}" ]]; then
         opts="$opts --max-size $max_size"
     fi
     if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
         opts="$opts --turn-screen-off"
     fi
+
+    adb -s "$device" shell cmd audio set-stream-mute STREAM_MUSIC true 2>/dev/null || true
 
     scrcpy -s "$device" $opts &
     scrcpy_pid=$!
