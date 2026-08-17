@@ -282,7 +282,14 @@ while true; do
         [[ -n "$temp" ]] && temp_disp=$(awk "BEGIN {printf \"%.1fC\", $temp / 10}")
         line_key="Battery: ${level:-?}%  Temp: $temp_disp"
         if [[ "$line_key" != "${last_line_key:-}" ]]; then
-            echo "  [$(date +%H:%M:%S)]  $line_key"
+            critical=false
+            [[ -n "$level" ]] && (( level <= 15 )) && critical=true
+            [[ -n "$temp" ]] && (( temp >= 400 )) && critical=true
+            if [[ "$critical" == true ]]; then
+                printf "  [\033[1;31m%s\033[0m]  \033[1;31m%s\033[0m\n" "$(date +%H:%M:%S)" "$line_key"
+            else
+                echo "  [$(date +%H:%M:%S)]  $line_key"
+            fi
             last_line_key="$line_key"
         fi
         read -t 5 -n 1 key 2>/dev/null || true
