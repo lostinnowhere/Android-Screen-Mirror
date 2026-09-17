@@ -235,6 +235,13 @@ while true; do
     physical_size=$(echo "$res_raw" | grep -o 'Physical size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Physical size: //' || true)
     override_size=$(echo "$res_raw" | grep -o 'Override size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Override size: //' || true)
 
+    # Reset any leftover density override so the resolution change preserves
+    # the device's original DPI.
+    if adb -s "$device" shell wm density 2>/dev/null | grep -q 'Override density:'; then
+        adb -s "$device" shell wm density reset >/dev/null 2>&1 || true
+        [[ "$reconnecting" == false ]] && echo "  Restored original DPI."
+    fi
+
     # Target render size: custom pixel choice or scale preset scales the
     # physical resolution; factor 1 / default = native (reset any override).
     if [[ -n "$physical_size" ]]; then
