@@ -232,8 +232,8 @@ while true; do
     wait_for_device "$device"
 
     res_raw=$(adb -s "$device" shell wm size 2>/dev/null || true)
-    physical_size=$(echo "$res_raw" | grep -o 'Physical size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Physical size: //')
-    override_size=$(echo "$res_raw" | grep -o 'Override size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Override size: //')
+    physical_size=$(echo "$res_raw" | grep -o 'Physical size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Physical size: //' || true)
+    override_size=$(echo "$res_raw" | grep -o 'Override size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Override size: //' || true)
 
     if [[ -n "$override_size" ]]; then
         pw="${physical_size%%x*}"
