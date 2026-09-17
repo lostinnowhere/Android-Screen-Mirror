@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-script_version=2
+script_version=3
 
 install_all_cmd() {
     if command -v apt &>/dev/null; then
@@ -232,9 +232,30 @@ while true; do
     wait_for_device "$device"
 
     res_raw=$(adb -s "$device" shell wm size 2>/dev/null || true)
-    resolution=$(echo "$res_raw" | grep -o 'Override size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Override size: //')
-    if [[ -z "$resolution" ]]; then
-        resolution=$(echo "$res_raw" | grep -o 'Physical size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Physical size: //')
+    physical_size=$(echo "$res_raw" | grep -o 'Physical size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Physical size: //')
+    override_size=$(echo "$res_raw" | grep -o 'Override size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Override size: //')
+
+    if [[ -n "$override_size" ]]; then
+        pw="${physical_size%%x*}"
+        ph="${physical_size#*x}"
+        if (( pw > ph )); then p_longest="$pw"; else p_longest="$ph"; fi
+        if [[ -n "${custom_max_size:-}" ]]; then
+            desired_max="$custom_max_size"
+        else
+            desired_max=$(awk "BEGIN {printf \"%.0f\", $p_longest * $factor}")
+        fi
+        ow="${override_size%%x*}"
+        oh="${override_size#*x}"
+        if (( ow > oh )); then o_longest="$ow"; else o_longest="$oh"; fi
+        if (( o_longest != desired_max )); then
+            [[ "$reconnecting" == false ]] && echo "  Clearing leftover wm size override (${override_size})..."
+            adb -s "$device" shell wm size reset 2>/dev/null || true
+            resolution="$physical_size"
+        else
+            resolution="$override_size"
+        fi
+    else
+        resolution="$physical_size"
     fi
 
     unset max_size
