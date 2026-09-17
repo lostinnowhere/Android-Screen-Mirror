@@ -231,7 +231,11 @@ while true; do
 
     wait_for_device "$device"
 
-    resolution=$(adb -s "$device" shell wm size 2>/dev/null | sed -n 's/.*\([0-9]\{1,\}x[0-9]\{1,\}\).*/\1/p;q' || true)
+    res_raw=$(adb -s "$device" shell wm size 2>/dev/null || true)
+    resolution=$(echo "$res_raw" | grep -o 'Override size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Override size: //')
+    if [[ -z "$resolution" ]]; then
+        resolution=$(echo "$res_raw" | grep -o 'Physical size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Physical size: //')
+    fi
 
     unset max_size
     if [[ -n "$resolution" ]]; then
