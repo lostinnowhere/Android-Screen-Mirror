@@ -1,6 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
-script_version=6
+# Bump policy: new feature → next integer (5 → 6). Fix/tweak → minor (6.1).
+# script_version must stay in sync with the root `version` file (X or X.Y).
+script_version=6.1
+
+# Returns 0 if $1 is greater than $2. Accepts "X" or "X.Y".
+version_gt() {
+    local major1 major2 minor1 minor2
+    major1="${1%%.*}"; minor1="${1#*.}"
+    major2="${2%%.*}"; minor2="${2#*.}"
+    [[ "$minor1" == "$1" ]] && minor1=0
+    [[ "$minor2" == "$2" ]] && minor2=0
+    if (( major1 > major2 )); then return 0
+    elif (( major1 < major2 )); then return 1
+    elif (( minor1 > minor2 )); then return 0
+    else return 1
+    fi
+}
 
 install_all_cmd() {
     if command -v apt &>/dev/null; then
@@ -98,7 +114,7 @@ if [[ ${#missing[@]} -gt 0 ]]; then
 fi
 
 remote_version=$(curl -sSL https://raw.githubusercontent.com/lostinnowhere/Android-Screen-Mirror/master/version 2>/dev/null || echo "0")
-if [[ "$remote_version" =~ ^[0-9]+$ ]] && (( remote_version > script_version )); then
+if [[ "$remote_version" =~ ^[0-9]+(\.[0-9]+)?$ ]] && version_gt "$remote_version" "$script_version"; then
     echo "Update available (v${script_version} → v${remote_version}). Updating..." >&2
     tmp=$(mktemp)
     if curl -sSL https://raw.githubusercontent.com/lostinnowhere/Android-Screen-Mirror/master/scrcpy-helper -o "$tmp" && head -1 "$tmp" | grep -q '^#!/usr/bin/env bash'; then
@@ -154,25 +170,61 @@ wait_for_device() {
     done
 }
 
-wait_for_any_device
+# Fast-connect CLI: --<dev><screen>-<scale|res>[-<fps>]
+#   dev     device number (1..N)
+#   screen  1 = keep screen on, 2 = turn screen off
+#   scale   preset 1-8 (0.25x..2x)  OR  res = pixel value for the longest side
+#   fps     optional scrcpy --max-fps cap (e.g. 30, 60)
+# Examples: --12-960-30  = device 1, screen off, 960px longest side, 30fps
+#           --11-6       = device 1, screen on, scale 6 (1.5x)
+#           --12-1280    = device 1, screen off, 1280px, no fps cap
+usage() {
+    echo "Usage: $(basename "$0") [--help] [--<dev><screen>-<scale|res>[-<fps>]]"
+    echo ""
+    echo "  With an argument, skips all prompts (fast connect):"
+    echo "    --12-960-30   device 1, screen off, 960px longest side, 30fps cap"
+    echo "    --11-6        device 1, screen on, scale 6 (1.5x)"
+    echo "    --12-1280     device 1, screen off, 1280px, no fps cap"
+    echo ""
+    echo "  Without an argument, asks interactively."
+}
 
-# Fast-connect argument: --<dev><screen>[-<scale|res>][-<fps>]
-#   e.g. --12-960-30 = device 1, screen off, 960px longest side, 30fps cap
 fast_mode=false
-if [[ $# -gt 0 && "$1" == --* ]]; then
-    arg="${1#--}"
-    dev_choice="${arg:0:1}"
-    screen_choice="${arg:1:1}"
-    after2="${arg:2}"
-    after2="${after2#-}"
-    if [[ "$after2" == *-* ]]; then
-        rest="${after2%-*}"
-        fps_choice="${after2#*-}"
-    else
-        rest="$after2"
-    fi
-    fast_mode=true
+if [[ $# -gt 0 ]]; then
+    case "$1" in
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        --*)
+            arg="${1#--}"
+            if [[ "$arg" =~ ^[0-9][12](-[0-9]+)?(-[0-9]+)?$ ]]; then
+                dev_choice="${arg:0:1}"
+                screen_choice="${arg:1:1}"
+                after2="${arg:2}"
+                after2="${after2#-}"
+                if [[ "$after2" == *-* ]]; then
+                    rest="${after2%-*}"
+                    fps_choice="${after2#*-}"
+                else
+                    rest="$after2"
+                fi
+                fast_mode=true
+            else
+                echo "Invalid fast-connect argument: $1" >&2
+                usage >&2
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            usage >&2
+            exit 1
+            ;;
+    esac
 fi
+
+wait_for_any_device
 
 if [[ "$fast_mode" == false ]]; then
     echo "Connected devices:"
