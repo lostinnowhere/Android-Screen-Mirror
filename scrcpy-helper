@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-script_version=5
+script_version=6
 
 install_all_cmd() {
     if command -v apt &>/dev/null; then
@@ -156,33 +156,55 @@ wait_for_device() {
 
 wait_for_any_device
 
-echo "Connected devices:"
-for i in "${!devices[@]}"; do
-    name=$(adb -s "${devices[$i]}" shell getprop ro.product.model 2>/dev/null | tr -d '\r')
-    echo "  $((i+1))) ${name:-Unknown}  (${devices[$i]})"
-done
+# Fast-connect argument: --<dev><screen>[-<scale|res>][-<fps>]
+#   e.g. --12-960-30 = device 1, screen off, 960px longest side, 30fps cap
+fast_mode=false
+if [[ $# -gt 0 && "$1" == --* ]]; then
+    arg="${1#--}"
+    dev_choice="${arg:0:1}"
+    screen_choice="${arg:1:1}"
+    after2="${arg:2}"
+    after2="${after2#-}"
+    if [[ "$after2" == *-* ]]; then
+        rest="${after2%-*}"
+        fps_choice="${after2#*-}"
+    else
+        rest="$after2"
+    fi
+    fast_mode=true
+fi
 
-echo ""
-echo "Keep device screen on?"
-echo "  1) yes     2) no"
-echo ""
-echo "Device screen scaling:"
-echo "  1) 0.25x     2) 0.5x      3) 0.75x     4) 1x (default)"
-echo "  5) 1.25x     6) 1.5x      7) 1.75x     8) 2x"
-echo ""
-echo "  For a specific output resolution, enter the pixel value directly"
-echo "  (e.g. 1280 for 720p, 1920 for 1080p)"
+if [[ "$fast_mode" == false ]]; then
+    echo "Connected devices:"
+    for i in "${!devices[@]}"; do
+        name=$(adb -s "${devices[$i]}" shell getprop ro.product.model 2>/dev/null | tr -d '\r')
+        echo "  $((i+1))) ${name:-Unknown}  (${devices[$i]})"
+    done
 
-echo ""
-printf "Enter choice (e.g. 121280 = device 1, screen off, 1280px): "
-read -r input
+    echo ""
+    echo "Keep device screen on?"
+    echo "  1) yes     2) no"
+    echo ""
+    echo "Device screen scaling:"
+    echo "  1) 0.25x     2) 0.5x      3) 0.75x     4) 1x (default)"
+    echo "  5) 1.25x     6) 1.5x      7) 1.75x     8) 2x"
+    echo ""
+    echo "  For a specific output resolution, enter the pixel value directly"
+    echo "  (e.g. 1280 for 720p, 1920 for 1080p)"
 
-input="${input:-11}"
+    echo ""
+    printf "Enter choice (e.g. 121280 = device 1, screen off, 1280px): "
+    read -r input
 
-dev_choice="${input:0:1}"
-screen_choice="${input:1:1}"
-screen_choice="${screen_choice:-1}"
-rest="${input:2}"
+    input="${input:-11}"
+
+    dev_choice="${input:0:1}"
+    screen_choice="${input:1:1}"
+    screen_choice="${screen_choice:-1}"
+    rest="${input:2}"
+else
+    echo "Fast connect: device $dev_choice, screen ${screen_choice}, resolution/scale ${rest:-native}${fps_choice:+ @${fps_choice}fps}"
+fi
 
 if [[ ! "$dev_choice" =~ ^[0-9]+$ ]] || (( dev_choice < 1 || dev_choice > ${#devices[@]} )); then
     echo "Invalid device selection." >&2
@@ -216,6 +238,15 @@ else
     echo "Invalid scale/resolution, using 1x." >&2
     factor=1
     scale_choice=4
+fi
+
+if [[ -n "${fps_choice:-}" ]]; then
+    if [[ "$fps_choice" =~ ^[0-9]+$ ]] && (( fps_choice > 0 )); then
+        echo "  FPS cap: ${fps_choice}"
+    else
+        echo "Invalid fps, ignoring." >&2
+        fps_choice=""
+    fi
 fi
 
 reconnecting=false
@@ -284,6 +315,9 @@ while true; do
     opts=""
     if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
         opts="$opts --turn-screen-off"
+    fi
+    if [[ -n "${fps_choice:-}" ]]; then
+        opts="$opts --max-fps $fps_choice"
     fi
 
     adb -s "$device" shell cmd audio set-stream-mute STREAM_MUSIC true 2>/dev/null || true
