@@ -24,13 +24,17 @@ The script shows all connected devices, a scale menu, and a screen-off toggle. Y
 | `124` | Device 1, screen on, scale 4 (1x) |
 | `123` | Device 1, screen on, scale 3 (0.75x) |
 | `122` | Device 1, screen off, scale 2 (0.5x) |
-| `121280` | Device 1, screen off, max-size 1280 (720p on a 1080p tablet) |
-| `111920` | Device 1, screen on, max-size 1920 (1080p) |
-| `21600` | Device 2, screen on, max-size 600 |
+| `12960` | Device 1, screen off, longest side 960px (renders 600x960 on a 1200x1920 tablet) |
+| `111920` | Device 1, screen on, longest side 1920px |
+| `21600` | Device 2, screen on, longest side 600px |
 | `221` | Device 2, screen off, scale 1 (0.25x) |
 | `1` | Device 1, screen on, no scaling |
 
-**Format:** first char = device number, second char = screen on(1) / off(2), rest = scale (1-8) or pixel max-size.
+**Format:** first char = device number, second char = screen on(1) / off(2), rest = scale (1-8) or pixel value for the longest side.
+
+A pixel value or non-1x scale sets the Android rendering resolution:
+`adb shell wm size WxH` (aspect ratio preserved). Choosing 1x resets any
+leftover override, so the device renders at its native resolution.
 
 ### Scale presets
 
@@ -45,7 +49,7 @@ The script shows all connected devices, a scale menu, and a screen-off toggle. Y
 | 7 | 1.75x |
 | 8 | 2x |
 
-For a specific output resolution, enter the pixel value directly (e.g. `1280` for 720p).
+For a specific output resolution, enter the target longest-side pixel value directly (e.g. `960` to render at 960p, `1280` for 720p-class output).
 
 ### Live monitoring
 

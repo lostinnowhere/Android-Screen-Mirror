@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-script_version=3
+script_version=4
 
 install_all_cmd() {
     if command -v apt &>/dev/null; then
@@ -235,27 +235,33 @@ while true; do
     physical_size=$(echo "$res_raw" | grep -o 'Physical size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Physical size: //' || true)
     override_size=$(echo "$res_raw" | grep -o 'Override size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Override size: //' || true)
 
-    if [[ -n "$override_size" ]]; then
+    # Target render size: custom pixel choice or scale preset scales the
+    # physical resolution; factor 1 / default = native (reset any override).
+    if [[ -n "$physical_size" ]]; then
         pw="${physical_size%%x*}"
         ph="${physical_size#*x}"
-        if (( pw > ph )); then p_longest="$pw"; else p_longest="$ph"; fi
+        p_longest=$(( pw > ph ? pw : ph ))
+        target_longest=""
         if [[ -n "${custom_max_size:-}" ]]; then
-            desired_max="$custom_max_size"
-        else
-            desired_max=$(awk "BEGIN {printf \"%.0f\", $p_longest * $factor}")
+            target_longest="$custom_max_size"
+        elif [[ "${scale_choice:-4}" != 4 ]]; then
+            target_longest=$(awk "BEGIN {printf \"%.0f\", $p_longest * $factor}")
         fi
-        ow="${override_size%%x*}"
-        oh="${override_size#*x}"
-        if (( ow > oh )); then o_longest="$ow"; else o_longest="$oh"; fi
-        if (( o_longest != desired_max )); then
-            [[ "$reconnecting" == false ]] && echo "  Clearing leftover wm size override (${override_size})..."
-            adb -s "$device" shell wm size reset 2>/dev/null || true
-            resolution="$physical_size"
+        if [[ -n "$target_longest" ]] && (( target_longest != p_longest )); then
+            tw=$(awk "BEGIN {printf \"%.0f\", $pw * $target_longest / $p_longest}")
+            th=$(awk "BEGIN {printf \"%.0f\", $ph * $target_longest / $p_longest}")
+            target_size="${tw}x${th}"
+            [[ "$reconnecting" == false ]] && echo "  Setting Android resolution to $target_size..."
+            adb -s "$device" shell wm size "$target_size" >/dev/null 2>&1 || true
+            res_raw=$(adb -s "$device" shell wm size 2>/dev/null || true)
+            resolution=$(echo "$res_raw" | grep -o 'Override size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Override size: //' || true)
+            [[ -z "$resolution" ]] && resolution=$(echo "$res_raw" | grep -o 'Physical size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Physical size: //' || true)
         else
-            resolution="$override_size"
+            [[ -n "$override_size" ]] && adb -s "$device" shell wm size reset >/dev/null 2>&1 || true
+            resolution="$physical_size"
         fi
     else
-        resolution="$physical_size"
+        resolution="$override_size"
     fi
 
     unset max_size
@@ -267,28 +273,12 @@ while true; do
         fi
     fi
     if [[ -n "$resolution" ]]; then
-        if (( width > height )); then
-            longest="$width"
-        else
-            longest="$height"
-        fi
-        if [[ -n "${custom_max_size:-}" ]]; then
-            max_size="$custom_max_size"
-        else
-            max_size=$(awk "BEGIN {printf \"%.0f\", $longest * $factor}")
-        fi
-        [[ "$reconnecting" == false ]] && echo "  Resolution: ${width}x${height}, max-size: $max_size"
-    elif [[ -n "${custom_max_size:-}" ]]; then
-        max_size="$custom_max_size"
-        [[ "$reconnecting" == false ]] && echo "  Using max-size: $max_size (resolution not detected)"
-    elif [[ "${scale_choice:-4}" != 4 ]]; then
-        echo "Warning: could not detect resolution, ignoring scale factor." >&2
+        [[ "$reconnecting" == false ]] && echo "  Resolution: ${width}x${height}"
+    elif [[ "${scale_choice:-4}" != 4 ]] || [[ -n "${custom_max_size:-}" ]]; then
+        echo "Warning: could not detect resolution, ignoring scale choice." >&2
     fi
 
     opts=""
-    if [[ -n "${max_size:-}" ]]; then
-        opts="$opts --max-size $max_size"
-    fi
     if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
         opts="$opts --turn-screen-off"
     fi
