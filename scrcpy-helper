@@ -2,7 +2,7 @@
 set -euo pipefail
 # Bump policy: new feature → next integer (5 → 6). Fix/tweak → minor (6.1).
 # script_version must stay in sync with the root `version` file (X or X.Y).
-script_version=6.1
+script_version=6.2
 
 # Returns 0 if $1 is greater than $2. Accepts "X" or "X.Y".
 version_gt() {
@@ -170,21 +170,20 @@ wait_for_device() {
     done
 }
 
-# Fast-connect CLI: --<dev><screen>-<scale|res>[-<fps>]
+# Fast-connect CLI: --<dev><screen>-<scale|res>
 #   dev     device number (1..N)
 #   screen  1 = keep screen on, 2 = turn screen off
 #   scale   preset 1-8 (0.25x..2x)  OR  res = pixel value for the longest side
-#   fps     optional scrcpy --max-fps cap (e.g. 30, 60)
-# Examples: --12-960-30  = device 1, screen off, 960px longest side, 30fps
-#           --11-6       = device 1, screen on, scale 6 (1.5x)
-#           --12-1280    = device 1, screen off, 1280px, no fps cap
+# Examples: --12-960  = device 1, screen off, 960px longest side
+#           --11-6    = device 1, screen on, scale 6 (1.5x)
+#           --12-1280 = device 1, screen off, 1280px
 usage() {
-    echo "Usage: $(basename "$0") [--help] [--<dev><screen>-<scale|res>[-<fps>]]"
+    echo "Usage: $(basename "$0") [--help] [--<dev><screen>-<scale|res>]"
     echo ""
     echo "  With an argument, skips all prompts (fast connect):"
-    echo "    --12-960-30   device 1, screen off, 960px longest side, 30fps cap"
-    echo "    --11-6        device 1, screen on, scale 6 (1.5x)"
-    echo "    --12-1280     device 1, screen off, 1280px, no fps cap"
+    echo "    --12-960    device 1, screen off, 960px longest side"
+    echo "    --11-6      device 1, screen on, scale 6 (1.5x)"
+    echo "    --12-1280   device 1, screen off, 1280px"
     echo ""
     echo "  Without an argument, asks interactively."
 }
@@ -198,17 +197,11 @@ if [[ $# -gt 0 ]]; then
             ;;
         --*)
             arg="${1#--}"
-            if [[ "$arg" =~ ^[0-9][12](-[0-9]+)?(-[0-9]+)?$ ]]; then
+            if [[ "$arg" =~ ^[0-9][12](-[0-9]+)?$ ]]; then
                 dev_choice="${arg:0:1}"
                 screen_choice="${arg:1:1}"
                 after2="${arg:2}"
-                after2="${after2#-}"
-                if [[ "$after2" == *-* ]]; then
-                    rest="${after2%-*}"
-                    fps_choice="${after2#*-}"
-                else
-                    rest="$after2"
-                fi
+                rest="${after2#-}"
                 fast_mode=true
             else
                 echo "Invalid fast-connect argument: $1" >&2
@@ -255,7 +248,7 @@ if [[ "$fast_mode" == false ]]; then
     screen_choice="${screen_choice:-1}"
     rest="${input:2}"
 else
-    echo "Fast connect: device $dev_choice, screen ${screen_choice}, resolution/scale ${rest:-native}${fps_choice:+ @${fps_choice}fps}"
+    echo "Fast connect: device $dev_choice, screen ${screen_choice}, resolution/scale ${rest:-native}"
 fi
 
 if [[ ! "$dev_choice" =~ ^[0-9]+$ ]] || (( dev_choice < 1 || dev_choice > ${#devices[@]} )); then
@@ -290,15 +283,6 @@ else
     echo "Invalid scale/resolution, using 1x." >&2
     factor=1
     scale_choice=4
-fi
-
-if [[ -n "${fps_choice:-}" ]]; then
-    if [[ "$fps_choice" =~ ^[0-9]+$ ]] && (( fps_choice > 0 )); then
-        echo "  FPS cap: ${fps_choice}"
-    else
-        echo "Invalid fps, ignoring." >&2
-        fps_choice=""
-    fi
 fi
 
 reconnecting=false
@@ -367,9 +351,6 @@ while true; do
     opts=""
     if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
         opts="$opts --turn-screen-off"
-    fi
-    if [[ -n "${fps_choice:-}" ]]; then
-        opts="$opts --max-fps $fps_choice"
     fi
 
     adb -s "$device" shell cmd audio set-stream-mute STREAM_MUSIC true 2>/dev/null || true

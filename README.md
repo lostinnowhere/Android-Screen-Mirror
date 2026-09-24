@@ -19,7 +19,7 @@ Then run:
 Skip all prompts with one argument:
 
 ```
-~/Projects/scrcpy-helper --<dev><screen>-<scale|res>[-<fps>]
+~/Projects/scrcpy-helper --<dev><screen>-<scale|res>
 ```
 
 | Part | Meaning |
@@ -27,15 +27,14 @@ Skip all prompts with one argument:
 | `dev` | Device number (1..N) |
 | `screen` | `1` = keep screen on, `2` = turn screen off |
 | `scale\|res` | Scale preset 1-8 (0.25x..2x), or pixel value for the longest side |
-| `fps` (optional) | scrcpy `--max-fps` cap, e.g. 30, 60 |
 
 Examples:
 
 ```sh
-~/Projects/scrcpy-helper --12-960-30   # device 1, screen off, 960px longest side, 30fps cap
-~/Projects/scrcpy-helper --11-6        # device 1, screen on, scale 6 (1.5x)
-~/Projects/scrcpy-helper --12-1280     # device 1, screen off, 1280px, no fps cap
-~/Projects/scrcpy-helper --help        # show usage
+~/Projects/scrcpy-helper --12-960    # device 1, screen off, 960px longest side
+~/Projects/scrcpy-helper --11-6      # device 1, screen on, scale 6 (1.5x)
+~/Projects/scrcpy-helper --12-1280   # device 1, screen off, 1280px
+~/Projects/scrcpy-helper --help      # show usage
 ```
 
 ## Usage
