@@ -79,8 +79,8 @@ For a specific output resolution, enter the target longest-side pixel value dire
 While scrcpy is running, the terminal logs battery level and temperature whenever they change:
 
 ```
-  14:35:22 🔋85%  28.0C
-  14:42:10 🔋84%  28.5C
+  14:35:22 🔋85%  28°C
+  14:42:10 🔋84%  28°C
 ```
 
 Press **Q** in the terminal to kill scrcpy and quit.
