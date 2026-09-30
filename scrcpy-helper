@@ -2,7 +2,7 @@
 set -euo pipefail
 # Bump policy: new feature → next integer (5 → 6). Fix/tweak → minor (6.1).
 # script_version must stay in sync with the root `version` file (X or X.Y).
-script_version=6.3
+script_version=6.4
 
 # Returns 0 if $1 is greater than $2. Accepts "X" or "X.Y".
 version_gt() {
@@ -285,6 +285,17 @@ else
     scale_choice=4
 fi
 
+# Nerd Font check: only affects the battery glyph rendering, so warn but
+# don't block mirroring.
+nerd_font_ok=false
+if command -v fc-list >/dev/null 2>&1 && fc-list 2>/dev/null | grep -qi nerd; then
+    nerd_font_ok=true
+fi
+if [[ "$nerd_font_ok" == false ]]; then
+    echo "Warning: Nerd Font not detected — the battery glyph won't render." >&2
+    echo "  Install one (e.g. sudo pacman -S ttf-nerd-font-symbols, or your distro's nerd font package)." >&2
+fi
+
 reconnecting=false
 while true; do
     read -t 0.2 -n 1 key 2>/dev/null || true
@@ -348,8 +359,9 @@ while true; do
         echo "Warning: could not detect resolution, ignoring scale choice." >&2
     fi
 
-    # Generic battery glyph (Nerd Font nf-md-battery), rendered as raw UTF-8.
-    battery_glyph=$'\xF3\xB0\x81\xB9'
+    # Battery charging glyph (Nerd Font nf-md-battery_charging): USB devices
+    # charge while connected, so a static charging icon always fits.
+    battery_glyph=$'\xF3\xB0\x82\x84'
 
     opts=""
     if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
