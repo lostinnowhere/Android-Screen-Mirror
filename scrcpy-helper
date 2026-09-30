@@ -2,7 +2,7 @@
 set -euo pipefail
 # Bump policy: new feature → next integer (5 → 6). Fix/tweak → minor (6.1).
 # script_version must stay in sync with the root `version` file (X or X.Y).
-script_version=6.6
+script_version=6.7
 
 # Returns 0 if $1 is greater than $2. Accepts "X" or "X.Y".
 version_gt() {
@@ -369,7 +369,7 @@ while true; do
         temp=$(echo "$data" | awk -F': ' '/temperature:/ {print $2; exit}')
         temp_disp="?"
         [[ -n "$temp" ]] && temp_disp=$(awk "BEGIN {printf \"%.1fC\", $temp / 10}")
-        line_key="${battery_glyph} ${level:-?}%  $temp_disp"
+        line_key="${battery_glyph}${level:-?}%  $temp_disp"
         if [[ "$line_key" != "${last_line_key:-}" ]]; then
             critical=false
             [[ -n "$level" ]] && (( level <= 15 )) && critical=true
