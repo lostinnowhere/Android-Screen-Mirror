@@ -2,7 +2,7 @@
 set -euo pipefail
 # Bump policy: new feature → next integer (5 → 6). Fix/tweak → minor (6.1).
 # script_version must stay in sync with the root `version` file (X or X.Y).
-script_version=6.2
+script_version=6.3
 
 # Returns 0 if $1 is greater than $2. Accepts "X" or "X.Y".
 version_gt() {
@@ -348,6 +348,9 @@ while true; do
         echo "Warning: could not detect resolution, ignoring scale choice." >&2
     fi
 
+    # Generic battery glyph (Nerd Font nf-md-battery), rendered as raw UTF-8.
+    battery_glyph=$'\xF3\xB0\x81\xB9'
+
     opts=""
     if [[ "$reconnecting" == true ]] || [[ "$screen_choice" == 2 ]]; then
         opts="$opts --turn-screen-off"
@@ -365,15 +368,15 @@ while true; do
         temp=$(echo "$data" | awk -F': ' '/temperature:/ {print $2; exit}')
         temp_disp="?"
         [[ -n "$temp" ]] && temp_disp=$(awk "BEGIN {printf \"%.1fC\", $temp / 10}")
-        line_key="Battery: ${level:-?}%  Temp: $temp_disp"
+        line_key="${battery_glyph} ${level:-?}%  $temp_disp"
         if [[ "$line_key" != "${last_line_key:-}" ]]; then
             critical=false
             [[ -n "$level" ]] && (( level <= 15 )) && critical=true
             [[ -n "$temp" ]] && (( temp >= 400 )) && critical=true
             if [[ "$critical" == true ]]; then
-                printf "  [\033[1;31m%s\033[0m]  \033[1;31m%s\033[0m\n" "$(date +%H:%M:%S)" "$line_key"
+                printf "  \033[1;31m%s %s\033[0m\n" "$(date +%H:%M:%S)" "$line_key"
             else
-                echo "  [$(date +%H:%M:%S)]  $line_key"
+                echo "  $(date +%H:%M:%S) $line_key"
             fi
             last_line_key="$line_key"
         fi

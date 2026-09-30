@@ -76,11 +76,11 @@ For a specific output resolution, enter the target longest-side pixel value dire
 
 ### Live monitoring
 
-While scrcpy is running, the terminal logs battery level and temperature whenever they change:
+While scrcpy is running, the terminal logs battery level and temperature whenever they change. The battery glyph is a Nerd Font icon, so use a [Nerd Font](https://www.nerdfonts.com) terminal font to see it:
 
 ```
-  [14:35:22]  Battery: 85%  Temp: 28.0C
-  [14:42:10]  Battery: 84%  Temp: 28.5C
+  14:35:22  85%  28.0C
+  14:42:10  84%  28.5C
 ```
 
 Press **Q** in the terminal to kill scrcpy and quit.
