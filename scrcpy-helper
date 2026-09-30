@@ -2,7 +2,7 @@
 set -euo pipefail
 # Bump policy: new feature → next integer (5 → 6). Fix/tweak → minor (6.1).
 # script_version must stay in sync with the root `version` file (X or X.Y).
-script_version=6.9
+script_version=6.10
 
 # Returns 0 if $1 is greater than $2. Accepts "X" or "X.Y".
 version_gt() {
@@ -384,6 +384,7 @@ while true; do
     scrcpy_pid=$!
 
     last_line_key=""
+    pending_key=""
     while kill -0 $scrcpy_pid 2>/dev/null; do
         data=$(adb -s "$device" shell dumpsys battery 2>/dev/null || true)
         level=$(echo "$data" | awk -F': ' '/level:/ {print $2; exit}')
@@ -395,7 +396,21 @@ while true; do
         temp_disp="?"
         [[ -n "$temp" ]] && temp_disp=$(awk "BEGIN {printf \"%.0f\", $temp / 10}")°C
         line_key="${battery_glyph}${level:-?}%  $temp_disp"
-        if [[ "$line_key" != "${last_line_key:-}" ]]; then
+
+        # Debounce: only log a new reading once it repeats on two consecutive
+        # polls, so a value flapping around a 1C boundary doesn't flood the log.
+        commit=false
+        if [[ -z "$last_line_key" ]]; then
+            commit=true
+        elif [[ "$line_key" == "$last_line_key" ]]; then
+            pending_key=""
+        elif [[ "$line_key" == "$pending_key" ]]; then
+            commit=true
+        else
+            pending_key="$line_key"
+        fi
+
+        if [[ "$commit" == true ]]; then
             critical=false
             [[ -n "$level" ]] && (( level <= 15 )) && critical=true
             [[ -n "$temp" ]] && (( temp >= 400 )) && critical=true
@@ -405,6 +420,7 @@ while true; do
                 echo "  $(date +%H:%M:%S) $line_key"
             fi
             last_line_key="$line_key"
+            pending_key=""
         fi
         read -t 5 -n 1 key 2>/dev/null || true
         if [[ "${key:-}" =~ [qQ] ]]; then

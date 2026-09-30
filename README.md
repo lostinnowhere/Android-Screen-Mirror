@@ -83,6 +83,8 @@ While scrcpy is running, the terminal logs battery level and temperature wheneve
   14:42:10 🔋84%  28°C
 ```
 
+Readings are polled every 5s. A new value is only printed once it repeats on two consecutive polls, so a temperature flapping around a degree boundary does not spam the log. That also means a real change appears ~10s after it happens.
+
 Press **Q** in the terminal to kill scrcpy and quit.
 
 ### Device cleanup
