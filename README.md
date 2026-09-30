@@ -76,7 +76,7 @@ For a specific output resolution, enter the target longest-side pixel value dire
 
 ### Live monitoring
 
-While scrcpy is running, the terminal logs battery level and temperature whenever they change. The battery glyph is the charging icon from a Nerd Font (USB devices charge while connected), so use a [Nerd Font](https://www.nerdfonts.com) terminal font to see it:
+While scrcpy is running, the terminal logs battery level and temperature whenever they change:
 
 ```
   14:35:22  85%  28.0C
@@ -96,7 +96,6 @@ Press **Q** in the terminal to kill scrcpy and quit.
 - bash 3.2+, coreutils
 - [adb](https://developer.android.com/studio/command-line/adb)
 - [scrcpy](https://github.com/Genymobile/scrcpy)
-- A [Nerd Font](https://www.nerdfonts.com) terminal font (for the battery charging glyph; a warning is shown if none is detected)
 
 Alpine Linux users: install `bash` from the main repo first.
 
