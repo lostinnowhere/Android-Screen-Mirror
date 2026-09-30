@@ -85,6 +85,15 @@ While scrcpy is running, the terminal logs battery level and temperature wheneve
 
 Press **Q** in the terminal to kill scrcpy and quit.
 
+### Device cleanup
+
+Whatever the script changes on the device is undone when it exits — including
+on **Q**, Ctrl+C, or a crash:
+
+- device audio is unmuted
+- any resolution override applied by the script is reset to native (`wm size reset`)
+- the scrcpy process is terminated
+
 ### Auto-reconnect
 
 - If the device disconnects (USB unplugged, WiFi drops), the script waits for it to come back and reconnects automatically

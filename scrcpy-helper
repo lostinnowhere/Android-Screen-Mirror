@@ -2,7 +2,7 @@
 set -euo pipefail
 # Bump policy: new feature → next integer (5 → 6). Fix/tweak → minor (6.1).
 # script_version must stay in sync with the root `version` file (X or X.Y).
-script_version=6.7
+script_version=6.8
 
 # Returns 0 if $1 is greater than $2. Accepts "X" or "X.Y".
 version_gt() {
@@ -285,6 +285,26 @@ else
     scale_choice=4
 fi
 
+# Undo what we change on the device (audio mute, resolution override, scrcpy
+# child) so quitting never leaves the tablet muted or stuck at a forced size.
+did_set_size=false
+did_mute=false
+cleanup() {
+    [[ -n "${scrcpy_pid:-}" ]] && kill "$scrcpy_pid" 2>/dev/null || true
+    local msg=""
+    if [[ "$did_mute" == true ]]; then
+        adb -s "$device" shell cmd audio set-stream-mute STREAM_MUSIC false >/dev/null 2>&1 || true
+        msg="device audio unmuted"
+    fi
+    if [[ "$did_set_size" == true ]]; then
+        adb -s "$device" shell wm size reset >/dev/null 2>&1 || true
+        msg="${msg:+$msg, }native resolution restored"
+    fi
+    [[ -n "$msg" ]] && printf "  Cleanup: %s\n" "$msg" >&2
+    return 0
+}
+trap cleanup EXIT
+
 reconnecting=false
 while true; do
     read -t 0.2 -n 1 key 2>/dev/null || true
@@ -323,6 +343,7 @@ while true; do
             target_size="${tw}x${th}"
             [[ "$reconnecting" == false ]] && echo "  Setting Android resolution to $target_size..."
             adb -s "$device" shell wm size "$target_size" >/dev/null 2>&1 || true
+            did_set_size=true
             res_raw=$(adb -s "$device" shell wm size 2>/dev/null || true)
             resolution=$(echo "$res_raw" | grep -o 'Override size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Override size: //' || true)
             [[ -z "$resolution" ]] && resolution=$(echo "$res_raw" | grep -o 'Physical size: [0-9]\{1,\}x[0-9]\{1,\}' | head -1 | sed 's/Physical size: //' || true)
@@ -334,7 +355,6 @@ while true; do
         resolution="$override_size"
     fi
 
-    unset max_size
     if [[ -n "$resolution" ]]; then
         width="${resolution%%x*}"
         height="${resolution#*x}"
@@ -358,6 +378,7 @@ while true; do
     fi
 
     adb -s "$device" shell cmd audio set-stream-mute STREAM_MUSIC true 2>/dev/null || true
+    did_mute=true
 
     scrcpy -s "$device" $opts &
     scrcpy_pid=$!
@@ -367,6 +388,10 @@ while true; do
         data=$(adb -s "$device" shell dumpsys battery 2>/dev/null || true)
         level=$(echo "$data" | awk -F': ' '/level:/ {print $2; exit}')
         temp=$(echo "$data" | awk -F': ' '/temperature:/ {print $2; exit}')
+        # Some ROMs report non-numeric values; (( )) would treat those as
+        # variable names and abort the script under `set -u`.
+        [[ "$level" =~ ^[0-9]+$ ]] || level=""
+        [[ "$temp" =~ ^[0-9]+$ ]] || temp=""
         temp_disp="?"
         [[ -n "$temp" ]] && temp_disp=$(awk "BEGIN {printf \"%.1fC\", $temp / 10}")
         line_key="${battery_glyph}${level:-?}%  $temp_disp"
@@ -384,11 +409,14 @@ while true; do
         read -t 5 -n 1 key 2>/dev/null || true
         if [[ "${key:-}" =~ [qQ] ]]; then
             kill $scrcpy_pid 2>/dev/null || true; wait $scrcpy_pid 2>/dev/null || true
+            scrcpy_pid=""
             echo "" && exit 0
         fi
     done
     wait $scrcpy_pid
     scrcpy_exit=$?
+    # Cleared so the EXIT trap can never kill a PID the kernel has recycled.
+    scrcpy_pid=""
     echo ""
 
     if [[ $scrcpy_exit -eq 0 ]]; then
