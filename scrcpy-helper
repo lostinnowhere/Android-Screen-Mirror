@@ -2,7 +2,7 @@
 set -euo pipefail
 # Bump policy: new feature → next integer (5 → 6). Fix/tweak → minor (6.1).
 # script_version must stay in sync with the root `version` file (X or X.Y).
-script_version=6.4
+script_version=6.5
 
 # Returns 0 if $1 is greater than $2. Accepts "X" or "X.Y".
 version_gt() {
@@ -293,7 +293,7 @@ if command -v fc-list >/dev/null 2>&1 && fc-list 2>/dev/null | grep -qi nerd; th
 fi
 if [[ "$nerd_font_ok" == false ]]; then
     echo "Warning: Nerd Font not detected — the battery glyph won't render." >&2
-    echo "  Install one (e.g. sudo pacman -S ttf-nerd-font-symbols, or your distro's nerd font package)." >&2
+    echo "  Install one (e.g. sudo pacman -S ttf-nerd-fonts-symbols, or your distro's nerd font package)." >&2
 fi
 
 reconnecting=false
